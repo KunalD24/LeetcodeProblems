@@ -1,0 +1,168 @@
+#include <stdlib.h>
+
+typedef enum { RED, BLACK } Color;
+
+typedef struct RBTNode {
+    int val;
+    int count;
+    int size;
+    Color color;
+    struct RBTNode *left, *right, *parent;
+} RBTNode;
+
+typedef struct {
+    int k;
+    RBTNode *root, *nil;
+} KthLargest;
+
+static inline int nodeSize(RBTNode* n) { return n ? n->size : 0; }
+
+static inline void pull(RBTNode* n) {
+    n->size = n->count + nodeSize(n->left) + nodeSize(n->right);
+}
+
+static RBTNode* newNode(RBTNode* nil, int val) {
+    RBTNode* n = (RBTNode*)malloc(sizeof(RBTNode));
+    n->val = val;
+    n->count = 1;
+    n->size = 1;
+    n->color = RED;
+    n->left = n->right = n->parent = nil;
+    return n;
+}
+
+static void leftRotate(KthLargest* T, RBTNode* x) {
+    RBTNode* y = x->right;
+    x->right = y->left;
+    if (y->left != T->nil) y->left->parent = x;
+    y->parent = x->parent;
+    if (x->parent == T->nil) T->root = y;
+    else if (x == x->parent->left) x->parent->left = y;
+    else x->parent->right = y;
+    y->left = x;
+    x->parent = y;
+    pull(x); pull(y);
+}
+
+static void rightRotate(KthLargest* T, RBTNode* y) {
+    RBTNode* x = y->left;
+    y->left = x->right;
+    if (x->right != T->nil) x->right->parent = y;
+    x->parent = y->parent;
+    if (y->parent == T->nil) T->root = x;
+    else if (y == y->parent->left) y->parent->left = x;
+    else y->parent->right = x;
+    x->right = y;
+    y->parent = x;
+    pull(y); pull(x);
+}
+
+static void insertFixup(KthLargest* T, RBTNode* z) {
+    while (z->parent->color == RED) {
+        if (z->parent == z->parent->parent->left) {
+            RBTNode* y = z->parent->parent->right;
+            if (y->color == RED) {
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->right) {
+                    z = z->parent;
+                    leftRotate(T, z);
+                }
+                z->parent->color = BLACK;
+                z->parent->parent->color = RED;
+                rightRotate(T, z->parent->parent);
+            }
+        } else {
+            RBTNode* y = z->parent->parent->left;
+            if (y->color == RED) {
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->left) {
+                    z = z->parent;
+                    rightRotate(T, z);
+                }
+                z->parent->color = BLACK;
+                z->parent->parent->color = RED;
+                leftRotate(T, z->parent->parent);
+            }
+        }
+    }
+    T->root->color = BLACK;
+}
+
+static void insertNode(KthLargest* T, int val) {
+    RBTNode* y = T->nil;
+    RBTNode* x = T->root;
+    while (x != T->nil) {
+        y = x;
+        x->size += 1;
+        if (val == x->val) {
+            x->count += 1;
+            pull(x);
+            return;
+        } else if (val < x->val) {
+            x = x->left;
+        } else {
+            x = x->right;
+        }
+    }
+    RBTNode* z = newNode(T->nil, val);
+    z->parent = y;
+    if (y == T->nil) T->root = z;
+    else if (val < y->val) y->left = z;
+    else y->right = z;
+    insertFixup(T, z);
+}
+
+static int findByRank(KthLargest* T, int rank) {
+    RBTNode* x = T->root;
+    while (x != T->nil) {
+        int rightSize = nodeSize(x->right);
+        if (rank <= rightSize) {
+            x = x->right;
+        } else if (rank > rightSize + x->count) {
+            rank -= rightSize + x->count;
+            x = x->left;
+        } else {
+            return x->val;
+        }
+    }
+    return -1;
+}
+
+KthLargest* kthLargestCreate(int k, int* nums, int numsSize) {
+    KthLargest* T = (KthLargest*)malloc(sizeof(KthLargest));
+    T->k = k;
+    T->nil = (RBTNode*)malloc(sizeof(RBTNode));
+    T->nil->color = BLACK;
+    T->nil->size = 0;
+    T->nil->count = 0;
+    T->nil->left = T->nil->right = T->nil->parent = T->nil;
+    T->root = T->nil;
+    for (int i = 0; i < numsSize; i++) insertNode(T, nums[i]);
+    return T;
+}
+
+int kthLargestAdd(KthLargest* obj, int val) {
+    insertNode(obj, val);
+    return findByRank(obj, obj->k);
+}
+
+void freeTree(KthLargest* T, RBTNode* n) {
+    if (n == T->nil) return;
+    freeTree(T, n->left);
+    freeTree(T, n->right);
+    free(n);
+}
+
+void kthLargestFree(KthLargest* obj) {
+    freeTree(obj, obj->root);
+    free(obj->nil);
+    free(obj);
+}

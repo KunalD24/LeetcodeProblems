@@ -1,0 +1,55 @@
+typedef struct {
+    int key;    
+    int index;  
+    int used;   
+} HashItem;
+
+#define TABLE_SIZE 20011  
+
+int hash(int key) {
+    if (key < 0) key = -key;
+    return key % TABLE_SIZE;
+}
+
+void insert(HashItem* table, int key, int index) {
+    int h = hash(key);
+    while (table[h].used) { 
+        h = (h + 1) % TABLE_SIZE;
+    }
+    table[h].key = key;
+    table[h].index = index;
+    table[h].used = 1;
+}
+
+int find(HashItem* table, int key) {
+    int h = hash(key);
+    int start = h;
+    while (table[h].used) {
+        if (table[h].key == key)
+            return table[h].index;
+        h = (h + 1) % TABLE_SIZE;
+        if (h == start) break; 
+    }
+    return -1;
+}
+
+int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
+    HashItem* table = calloc(TABLE_SIZE, sizeof(HashItem));
+    int* res = malloc(2 * sizeof(int));
+    *returnSize = 2;
+
+    for (int i = 0; i < numsSize; i++) {
+        int complement = target - nums[i];
+        int foundIndex = find(table, complement);
+        if (foundIndex != -1) {
+            res[0] = foundIndex;
+            res[1] = i;
+            free(table);
+            return res;
+        }
+        insert(table, nums[i], i);
+    }
+
+    free(table);
+    return res;
+}

@@ -1,0 +1,144 @@
+typedef enum { RED, BLACK } Color;
+
+typedef struct RBNode {
+    int val;
+    Color color;
+    struct RBNode *left, *right, *parent;
+} RBNode;
+
+
+RBNode* newNode(int val) {
+    RBNode* node = (RBNode*)malloc(sizeof(RBNode));
+    node->val = val;
+    node->color = RED;
+    node->left = node->right = node->parent = NULL;
+    return node;
+}
+
+
+RBNode* leftRotate(RBNode* root, RBNode* x) {
+    RBNode* y = x->right;
+    x->right = y->left;
+    if (y->left) y->left->parent = x;
+    y->parent = x->parent;
+    if (!x->parent) root = y;
+    else if (x == x->parent->left) x->parent->left = y;
+    else x->parent->right = y;
+    y->left = x;
+    x->parent = y;
+    return root;
+}
+
+
+RBNode* rightRotate(RBNode* root, RBNode* y) {
+    RBNode* x = y->left;
+    y->left = x->right;
+    if (x->right) x->right->parent = y;
+    x->parent = y->parent;
+    if (!y->parent) root = x;
+    else if (y == y->parent->left) y->parent->left = x;
+    else y->parent->right = x;
+    x->right = y;
+    y->parent = x;
+    return root;
+}
+
+
+RBNode* insertFixup(RBNode* root, RBNode* z) {
+    while (z->parent && z->parent->color == RED) {
+        RBNode* grand = z->parent->parent;
+        if (z->parent == grand->left) {
+            RBNode* uncle = grand->right;
+            if (uncle && uncle->color == RED) {
+                z->parent->color = BLACK;
+                uncle->color = BLACK;
+                grand->color = RED;
+                z = grand;
+            } else {
+                if (z == z->parent->right) {
+                    z = z->parent;
+                    root = leftRotate(root, z);
+                }
+                z->parent->color = BLACK;
+                grand->color = RED;
+                root = rightRotate(root, grand);
+            }
+        } else {
+            RBNode* uncle = grand->left;
+            if (uncle && uncle->color == RED) {
+                z->parent->color = BLACK;
+                uncle->color = BLACK;
+                grand->color = RED;
+                z = grand;
+            } else {
+                if (z == z->parent->left) {
+                    z = z->parent;
+                    root = rightRotate(root, z);
+                }
+                z->parent->color = BLACK;
+                grand->color = RED;
+                root = leftRotate(root, grand);
+            }
+        }
+    }
+    while (root->parent) root = root->parent;
+    root->color = BLACK;
+    return root;
+}
+
+
+RBNode* insert(RBNode* root, int val) {
+    RBNode* y = NULL;
+    RBNode* x = root;
+    while (x) {
+        y = x;
+        if (val == x->val) return root; 
+        if (val < x->val) x = x->left;
+        else x = x->right;
+    }
+    RBNode* z = newNode(val);
+    z->parent = y;
+    if (!y) root = z;
+    else if (val < y->val) y->left = z;
+    else y->right = z;
+
+    root = insertFixup(root, z);
+    return root;
+}
+
+
+void reverseInorder(RBNode* root, int* k, int* result) {
+    if (!root || *k == 0) return;
+    reverseInorder(root->right, k, result);
+    if (*k > 0) {
+        (*k)--;
+        if (*k == 0) {
+            *result = root->val;
+            return;
+        }
+    }
+    reverseInorder(root->left, k, result);
+}
+
+
+void freeRBT(RBNode* root) {
+    if (!root) return;
+    freeRBT(root->left);
+    freeRBT(root->right);
+    free(root);
+}
+
+
+int thirdMax(int* nums, int numsSize) {
+    RBNode* root = NULL;
+    for (int i = 0; i < numsSize; i++) root = insert(root, nums[i]);
+    int k = 3, result = 0;
+    reverseInorder(root, &k, &result);
+    if (k > 0) { 
+        RBNode* curr = root;
+        while (curr->right) curr = curr->right;
+        result = curr->val;
+    }
+    freeRBT(root);
+    return result;
+}

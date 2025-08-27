@@ -1,0 +1,98 @@
+typedef struct Node {
+    int key;
+    int value;
+    struct Node *prev;
+    struct Node *next;
+} Node;
+
+typedef struct {
+    int capacity;
+    int size;
+    Node *head, *tail; 
+    Node **hash;  
+    int hashSize;
+} LRUCache;
+
+Node* createNode(int key, int value) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    node->key = key;
+    node->value = value;
+    node->prev = node->next = NULL;
+    return node;
+}
+
+void addNodeToFront(LRUCache* obj, Node* node) {
+    node->next = obj->head->next;
+    node->prev = obj->head;
+    obj->head->next->prev = node;
+    obj->head->next = node;
+}
+
+void removeNode(Node* node) {
+    node->prev->next = node->next;
+    node->next->prev = node->prev;
+}
+
+void moveToFront(LRUCache* obj, Node* node) {
+    removeNode(node);
+    addNodeToFront(obj, node);
+}
+
+Node* removeTail(LRUCache* obj) {
+    Node* node = obj->tail->prev;
+    removeNode(node);
+    return node;
+}
+
+LRUCache* lRUCacheCreate(int capacity) {
+    LRUCache* obj = (LRUCache*)malloc(sizeof(LRUCache));
+    obj->capacity = capacity;
+    obj->size = 0;
+    obj->hashSize = 10005; 
+    obj->hash = (Node**)calloc(obj->hashSize, sizeof(Node*));
+
+    
+    obj->head = createNode(0, 0);
+    obj->tail = createNode(0, 0);
+    obj->head->next = obj->tail;
+    obj->tail->prev = obj->head;
+    return obj;
+}
+
+int lRUCacheGet(LRUCache* obj, int key) {
+    Node* node = obj->hash[key];
+    if (!node) return -1;
+    moveToFront(obj, node);
+    return node->value;
+}
+
+void lRUCachePut(LRUCache* obj, int key, int value) {
+    Node* node = obj->hash[key];
+    if (node) {
+        node->value = value;
+        moveToFront(obj, node);
+    } else {
+        Node* newNode = createNode(key, value);
+        obj->hash[key] = newNode;
+        addNodeToFront(obj, newNode);
+        obj->size++;
+
+        if (obj->size > obj->capacity) {
+            Node* tailNode = removeTail(obj);
+            obj->hash[tailNode->key] = NULL;
+            free(tailNode);
+            obj->size--;
+        }
+    }
+}
+
+void lRUCacheFree(LRUCache* obj) {
+    Node* curr = obj->head;
+    while (curr) {
+        Node* temp = curr;
+        curr = curr->next;
+        free(temp);
+    }
+    free(obj->hash);
+    free(obj);
+}

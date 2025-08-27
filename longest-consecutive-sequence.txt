@@ -1,0 +1,92 @@
+
+typedef struct Node {
+    long long key;
+    struct Node* next;
+} Node;
+
+#define TABLE_SIZE 262147 // large prime for better distribution
+
+// Hash function
+int hash(long long key) {
+    if (key < 0) key = -key;
+    return (int)(key % TABLE_SIZE);
+}
+
+Node* createNode(long long key) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->key = key;
+    newNode->next = NULL;
+    return newNode;
+}
+
+// Insert into hash set (ignore duplicates)
+void insert(Node** table, long long key) {
+    int h = hash(key);
+    Node* curr = table[h];
+    while (curr) {
+        if (curr->key == key) return; // already exists
+        curr = curr->next;
+    }
+    Node* newNode = createNode(key);
+    newNode->next = table[h];
+    table[h] = newNode;
+}
+
+// Check if key exists
+int contains(Node** table, long long key) {
+    int h = hash(key);
+    Node* curr = table[h];
+    while (curr) {
+        if (curr->key == key) return 1;
+        curr = curr->next;
+    }
+    return 0;
+}
+
+// Free the hash table
+void freeTable(Node** table) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        Node* curr = table[i];
+        while (curr) {
+            Node* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+    free(table);
+}
+
+int longestConsecutive(int* nums, int numsSize) {
+    if (numsSize == 0) return 0;
+
+    Node** table = (Node**)calloc(TABLE_SIZE, sizeof(Node*));
+
+    // Insert all numbers into hash set
+    for (int i = 0; i < numsSize; i++) {
+        insert(table, nums[i]);
+    }
+
+    int longest = 0;
+
+    for (int i = 0; i < numsSize; i++) {
+        int num = nums[i];
+
+        // Start counting only if this is sequence start
+        if (!contains(table, (long long)num - 1)) {
+            int currentNum = num;
+            int streak = 1;
+
+            while (contains(table, (long long)currentNum + 1)) {
+                currentNum++;
+                streak++;
+            }
+
+            if (streak > longest) {
+                longest = streak;
+            }
+        }
+    }
+
+    freeTable(table);
+    return longest;
+}

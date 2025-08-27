@@ -1,0 +1,87 @@
+#define TABLE_SIZE 100
+
+struct Node 
+{
+    char key[50];   
+    char value[2048]; 
+    struct Node *next;
+};
+
+struct Node* hashTable[TABLE_SIZE] = {NULL};
+
+unsigned int hash(const char *str) 
+{
+    unsigned int hashValue = 0;
+    while (*str) 
+    {
+        hashValue = (hashValue * 31) + *str++;
+    }
+    return hashValue % TABLE_SIZE;
+}
+
+void insert(const char *key, const char *value) 
+{
+    unsigned int index = hash(key);
+    struct Node *newNode = (struct Node*)malloc(sizeof(struct Node));
+    strcpy(newNode->key, key);
+    strcpy(newNode->value, value);
+    newNode->next = NULL;
+
+    if (hashTable[index] == NULL) 
+    {
+        hashTable[index] = newNode;
+    } 
+    else 
+    {
+        struct Node *temp = hashTable[index];
+        while (temp->next != NULL) 
+        {
+            if (strcmp(temp->key, key) == 0) 
+            {
+                strcpy(temp->value, value);
+                free(newNode);
+                return;
+            }
+            temp = temp->next;
+        }
+        if (strcmp(temp->key, key) == 0) 
+        {
+            strcpy(temp->value, value);
+            free(newNode);
+            return;
+        }
+        temp->next = newNode;
+    }
+}
+
+char* search(const char *key) 
+{
+    unsigned int index = hash(key);
+    struct Node *temp = hashTable[index];
+    while (temp != NULL) {
+        if (strcmp(temp->key, key) == 0) 
+        {
+            return temp->value;
+        }
+        temp = temp->next;
+    }
+    return NULL;
+}
+
+char* encode(char* longUrl) {
+    static int counter = 0;
+    static char shortUrl[64];
+    sprintf(shortUrl, "http://tinyurl.com/%d", counter);
+    char key[50];
+    sprintf(key, "%d", counter);
+
+    insert(key, longUrl);
+    counter++;
+    return shortUrl;
+}
+
+char* decode(char* shortUrl) {
+    char *id = strrchr(shortUrl, '/');
+    if (id) id++;
+    return search(id);
+}

@@ -1,0 +1,67 @@
+#define TABLE_SIZE 10
+
+struct Node {
+    char key[50];
+    int value;
+    struct Node *next;
+};
+
+struct Node* hashTable[TABLE_SIZE] = {NULL};
+
+unsigned int hash(const char *key) {
+    unsigned int hashValue = 0;
+    while (*key) {
+        hashValue = (hashValue * 31) + *key++;
+    }
+    return hashValue % TABLE_SIZE;
+}
+
+void insert(const char *key) {
+    unsigned int index = hash(key);
+
+    struct Node *temp = hashTable[index];
+    while (temp != NULL) {
+        if (strcmp(temp->key, key) == 0) {
+            temp->value++; 
+            return;
+        }
+        temp = temp->next;
+    }
+
+
+    struct Node *newNode = (struct Node*)malloc(sizeof(struct Node));
+    strcpy(newNode->key, key);
+    newNode->value = 1;
+    newNode->next = hashTable[index];
+    hashTable[index] = newNode;
+}
+
+int getFrequency(const char *key) {
+    unsigned int index = hash(key);
+    struct Node *temp = hashTable[index];
+    while (temp != NULL) {
+        if (strcmp(temp->key, key) == 0) {
+            return temp->value;
+        }
+        temp = temp->next;
+    }
+    return 0;
+}
+
+int firstUniqChar(char* s) {
+    char keyStr[2] = {0};
+
+
+    for (int i = 0; s[i] != '\0'; i++) {
+        keyStr[0] = s[i];
+        insert(keyStr);
+    }
+
+    for (int i = 0; s[i] != '\0'; i++) {
+        keyStr[0] = s[i];
+        if (getFrequency(keyStr) == 1) {
+            return i;
+        }
+    }
+    return -1;
+}

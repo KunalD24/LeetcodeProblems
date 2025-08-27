@@ -1,0 +1,96 @@
+struct AVLTreeNode {
+    struct TreeNode node;   
+    int height;             
+};
+
+int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+int height(struct AVLTreeNode* n) {
+    return n ? n->height : 0;
+}
+
+int getBalance(struct AVLTreeNode* n) {
+    return n ? height((struct AVLTreeNode*)n->node.left) -
+               height((struct AVLTreeNode*)n->node.right) : 0;
+}
+
+struct AVLTreeNode* newNode(int val) {
+    struct AVLTreeNode* n = (struct AVLTreeNode*)malloc(sizeof(struct AVLTreeNode));
+    n->node.val = val;
+    n->node.left = NULL;
+    n->node.right = NULL;
+    n->height = 1;
+    return n;
+}
+
+struct AVLTreeNode* rightRotate(struct AVLTreeNode* y) {
+    struct AVLTreeNode* x = (struct AVLTreeNode*)y->node.left;
+    struct AVLTreeNode* T2 = (struct AVLTreeNode*)x->node.right;
+
+    x->node.right = (struct TreeNode*)y;
+    y->node.left = (struct TreeNode*)T2;
+
+    y->height = max(height((struct AVLTreeNode*)y->node.left),
+                    height((struct AVLTreeNode*)y->node.right)) + 1;
+    x->height = max(height((struct AVLTreeNode*)x->node.left),
+                    height((struct AVLTreeNode*)x->node.right)) + 1;
+
+    return x;
+}
+
+struct AVLTreeNode* leftRotate(struct AVLTreeNode* x) {
+    struct AVLTreeNode* y = (struct AVLTreeNode*)x->node.right;
+    struct AVLTreeNode* T2 = (struct AVLTreeNode*)y->node.left;
+    y->node.left = (struct TreeNode*)x;
+    x->node.right = (struct TreeNode*)T2;
+    x->height = max(height((struct AVLTreeNode*)x->node.left),
+                    height((struct AVLTreeNode*)x->node.right)) + 1;
+    y->height = max(height((struct AVLTreeNode*)y->node.left),
+                    height((struct AVLTreeNode*)y->node.right)) + 1;
+
+    return y;
+}
+
+struct AVLTreeNode* insertAVL(struct AVLTreeNode* root, int val) {
+    if (!root) return newNode(val);
+
+    if (val < root->node.val)
+        root->node.left = (struct TreeNode*)insertAVL((struct AVLTreeNode*)root->node.left, val);
+    else if (val > root->node.val)
+        root->node.right = (struct TreeNode*)insertAVL((struct AVLTreeNode*)root->node.right, val);
+    else
+        return root; 
+
+    root->height = 1 + max(height((struct AVLTreeNode*)root->node.left),
+                           height((struct AVLTreeNode*)root->node.right));
+
+    int balance = getBalance(root);
+    if (balance > 1 && val < ((struct AVLTreeNode*)root->node.left)->node.val)
+        return rightRotate(root);
+
+    if (balance < -1 && val > ((struct AVLTreeNode*)root->node.right)->node.val)
+        return leftRotate(root);
+
+    if (balance > 1 && val > ((struct AVLTreeNode*)root->node.left)->node.val) {
+        root->node.left = (struct TreeNode*)leftRotate((struct AVLTreeNode*)root->node.left);
+        return rightRotate(root);
+    }
+
+    if (balance < -1 && val < ((struct AVLTreeNode*)root->node.right)->node.val) {
+        root->node.right = (struct TreeNode*)rightRotate((struct AVLTreeNode*)root->node.right);
+        return leftRotate(root);
+    }
+
+    return root;
+}
+
+struct TreeNode* sortedListToBST(struct ListNode* head) {
+    struct AVLTreeNode* root = NULL;
+    while (head) {
+        root = insertAVL(root, head->val);
+        head = head->next;
+    }
+    return (struct TreeNode*)root;
+}

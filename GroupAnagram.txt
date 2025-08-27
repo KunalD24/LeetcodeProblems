@@ -1,0 +1,95 @@
+#define TABLE_SIZE 10007
+
+typedef struct Node {
+    char *word;
+    struct Node *next;
+} Node;
+
+typedef struct {
+    char *key;
+    Node *words;
+} Entry;
+
+unsigned int hash(const char *str) {
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c;
+    return hash % TABLE_SIZE;
+}
+
+int cmpChar(const void *a, const void *b) {
+    return (*(char *)a - *(char *)b);
+}
+
+char* sortString(const char *str) {
+    char *sorted = strdup(str);
+    qsort(sorted, strlen(sorted), sizeof(char), cmpChar);
+    return sorted;
+}
+
+char ***groupAnagrams(char **strs, int strsSize, int* returnSize, int** returnColumnSizes) {
+    Entry *hashTable = calloc(TABLE_SIZE, sizeof(Entry));
+
+    // Insert strings into hash table
+    for (int i = 0; i < strsSize; i++) {
+        char *sortedKey = sortString(strs[i]);
+        unsigned int idx = hash(sortedKey);
+
+        // Linear probing for collisions
+        while (hashTable[idx].key != NULL && strcmp(hashTable[idx].key, sortedKey) != 0) {
+            idx = (idx + 1) % TABLE_SIZE;
+        }
+        if (hashTable[idx].key == NULL) {
+            hashTable[idx].key = sortedKey;
+            hashTable[idx].words = NULL;
+        } else {
+            free(sortedKey);
+        }
+
+        Node *newNode = malloc(sizeof(Node));
+        newNode->word = strs[i];
+        newNode->next = hashTable[idx].words;
+        hashTable[idx].words = newNode;
+    }
+
+    // Count groups
+    int groupCount = 0;
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (hashTable[i].key != NULL)
+            groupCount++;
+    }
+
+    *returnSize = groupCount;
+    *returnColumnSizes = malloc(groupCount * sizeof(int));
+    char ***result = malloc(groupCount * sizeof(char**));
+
+    int g = 0;
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (hashTable[i].key != NULL) {
+            // Count words in this group
+            int count = 0;
+            Node *curr = hashTable[i].words;
+            while (curr) {
+                count++;
+                curr = curr->next;
+            }
+            (*returnColumnSizes)[g] = count;
+
+            // Store words
+            result[g] = malloc(count * sizeof(char*));
+            curr = hashTable[i].words;
+            int j = 0;
+            while (curr) {
+                result[g][j++] = curr->word;
+                Node *tmp = curr;
+                curr = curr->next;
+                free(tmp); // free node
+            }
+            g++;
+        }
+    }
+
+    free(hashTable);
+    return result;
+}
