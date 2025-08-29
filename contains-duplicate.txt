@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+
+#define MAX_LEVEL 16
+
+typedef struct SkipListNode {
+    int val;
+    struct SkipListNode* forward[MAX_LEVEL];
+} SkipListNode;
+
+typedef struct {
+    SkipListNode* head;
+    int level;
+} SkipList;
+
+SkipListNode* createNode(int val, int level) {
+    SkipListNode* node = (SkipListNode*)malloc(sizeof(SkipListNode));
+    node->val = val;
+    for(int i = 0; i < MAX_LEVEL; i++) node->forward[i] = NULL;
+    return node;
+}
+
+SkipList* createSkipList() {
+    SkipList* sl = (SkipList*)malloc(sizeof(SkipList));
+    sl->head = createNode(-1, MAX_LEVEL);
+    sl->level = 0;
+    return sl;
+}
+
+int randomLevel() {
+    int lvl = 0;
+    while ((rand() & 1) && lvl < MAX_LEVEL - 1) lvl++;
+    return lvl;
+}
+
+bool search(SkipList* sl, int val) {
+    SkipListNode* node = sl->head;
+    for (int i = sl->level; i >= 0; i--) {
+        while (node->forward[i] && node->forward[i]->val < val) {
+            node = node->forward[i];
+        }
+    }
+    node = node->forward[0];
+    return node != NULL && node->val == val;
+}
+
+void insert(SkipList* sl, int val) {
+    SkipListNode* update[MAX_LEVEL];
+    SkipListNode* node = sl->head;
+
+    for(int i = sl->level; i >= 0; i--) {
+        while(node->forward[i] && node->forward[i]->val < val) {
+            node = node->forward[i];
+        }
+        update[i] = node;
+    }
+
+    node = node->forward[0];
+    if(node == NULL || node->val != val) {
+        int lvl = randomLevel();
+        if(lvl > sl->level) {
+            for(int i = sl->level + 1; i <= lvl; i++) update[i] = sl->head;
+            sl->level = lvl;
+        }
+        SkipListNode* newNode = createNode(val, lvl);
+        for(int i = 0; i <= lvl; i++) {
+            newNode->forward[i] = update[i]->forward[i];
+            update[i]->forward[i] = newNode;
+        }
+    }
+}
+
+bool containsDuplicate(int* nums, int numsSize){
+    SkipList* sl = createSkipList();
+    srand(time(NULL));
+    for(int i = 0; i < numsSize; i++){
+        if(search(sl, nums[i])) return true;
+        insert(sl, nums[i]);
+    }
+    return false;
+}
