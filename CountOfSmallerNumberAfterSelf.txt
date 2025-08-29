@@ -3,59 +3,69 @@
 
 typedef enum { RED, BLACK } Color;
 
-typedef struct RBTNode {
-    int val;
+typedef struct Node {
+    int key;
     int count;
-    int leftSize;
+    int size;
     Color color;
-    struct RBTNode* left;
-    struct RBTNode* right;
-    struct RBTNode* parent;
-} RBTNode;
+    struct Node *left, *right, *parent;
+} Node;
 
-typedef struct {
-    RBTNode* root;
-    RBTNode* nil;
-} RBTree;
+Node *NIL;
+Node *root;
 
-RBTNode* newNode(RBTree* tree, int val) {
-    RBTNode* node = (RBTNode*)malloc(sizeof(RBTNode));
-    node->val = val;
-    node->count = 1;
-    node->leftSize = 0;
-    node->color = RED;
-    node->left = node->right = node->parent = tree->nil;
-    return node;
+int size(Node *x) {
+    return x == NIL ? 0 : x->size;
 }
 
-void leftRotate(RBTree* tree, RBTNode* x) {
-    RBTNode* y = x->right;
+void update_size(Node *x) {
+    if (x != NIL) {
+        x->size = x->count + size(x->left) + size(x->right);
+    }
+}
+
+void left_rotate(Node **root, Node *x) {
+    Node *y = x->right;
     x->right = y->left;
-    if (y->left != tree->nil) y->left->parent = x;
+    if (y->left != NIL) y->left->parent = x;
     y->parent = x->parent;
-    if (x->parent == tree->nil) tree->root = y;
+    if (x->parent == NIL) *root = y;
     else if (x == x->parent->left) x->parent->left = y;
     else x->parent->right = y;
     y->left = x;
     x->parent = y;
+    update_size(x);
+    update_size(y);
 }
 
-void rightRotate(RBTree* tree, RBTNode* y) {
-    RBTNode* x = y->left;
+void right_rotate(Node **root, Node *y) {
+    Node *x = y->left;
     y->left = x->right;
-    if (x->right != tree->nil) x->right->parent = y;
+    if (x->right != NIL) x->right->parent = y;
     x->parent = y->parent;
-    if (y->parent == tree->nil) tree->root = x;
+    if (y->parent == NIL) *root = x;
     else if (y == y->parent->left) y->parent->left = x;
     else y->parent->right = x;
     x->right = y;
     y->parent = x;
+    update_size(y);
+    update_size(x);
 }
 
-void insertFixup(RBTree* tree, RBTNode* z) {
+Node* new_node(int key) {
+    Node *n = (Node*)malloc(sizeof(Node));
+    n->key = key;
+    n->count = 1;
+    n->size = 1;
+    n->color = RED;
+    n->left = n->right = n->parent = NIL;
+    return n;
+}
+
+void insert_fixup(Node **root, Node *z) {
     while (z->parent->color == RED) {
         if (z->parent == z->parent->parent->left) {
-            RBTNode* y = z->parent->parent->right;
+            Node *y = z->parent->parent->right;
             if (y->color == RED) {
                 z->parent->color = BLACK;
                 y->color = BLACK;
@@ -64,14 +74,14 @@ void insertFixup(RBTree* tree, RBTNode* z) {
             } else {
                 if (z == z->parent->right) {
                     z = z->parent;
-                    leftRotate(tree, z);
+                    left_rotate(root, z);
                 }
                 z->parent->color = BLACK;
                 z->parent->parent->color = RED;
-                rightRotate(tree, z->parent->parent);
+                right_rotate(root, z->parent->parent);
             }
         } else {
-            RBTNode* y = z->parent->parent->left;
+            Node *y = z->parent->parent->left;
             if (y->color == RED) {
                 z->parent->color = BLACK;
                 y->color = BLACK;
@@ -80,72 +90,62 @@ void insertFixup(RBTree* tree, RBTNode* z) {
             } else {
                 if (z == z->parent->left) {
                     z = z->parent;
-                    rightRotate(tree, z);
+                    right_rotate(root, z);
                 }
                 z->parent->color = BLACK;
                 z->parent->parent->color = RED;
-                leftRotate(tree, z->parent->parent);
+                left_rotate(root, z->parent->parent);
             }
         }
     }
-    tree->root->color = BLACK;
+    (*root)->color = BLACK;
 }
 
-RBTNode* insert(RBTree* tree, int val, int* smallerCount) {
-    RBTNode* y = tree->nil;
-    RBTNode* x = tree->root;
-    RBTNode* z = newNode(tree, val);
-    *smallerCount = 0;
-
-    while (x != tree->nil) {
+void insert(Node **root, int key) {
+    Node *y = NIL, *x = *root;
+    while (x != NIL) {
         y = x;
-        if (val == x->val) {
+        x->size++;
+        if (key == x->key) {
             x->count++;
-            *smallerCount += x->leftSize;
-            free(z);
-            return x;
-        } else if (val < x->val) {
-            x->leftSize++;
-            x = x->left;
-        } else {
-            *smallerCount += x->leftSize + x->count;
-            x = x->right;
-        }
+            update_size(x);
+            return;
+        } else if (key < x->key) x = x->left;
+        else x = x->right;
     }
+    Node *z = new_node(key);
     z->parent = y;
-    if (y == tree->nil) tree->root = z;
-    else if (val < y->val) y->left = z;
+    if (y == NIL) *root = z;
+    else if (key < y->key) y->left = z;
     else y->right = z;
-
-    insertFixup(tree, z);
-    return z;
+    insert_fixup(root, z);
 }
 
-void freeTree(RBTree* tree, RBTNode* node) {
-    if (node == tree->nil) return;
-    freeTree(tree, node->left);
-    freeTree(tree, node->right);
-    free(node);
+int countLess(Node *x, int key) {
+    if (x == NIL) return 0;
+    if (key <= x->key) {
+        return countLess(x->left, key);
+    } else {
+        return size(x->left) + x->count + countLess(x->right, key);
+    }
+}
+
+void init_NIL() {
+    NIL = (Node*)malloc(sizeof(Node));
+    NIL->color = BLACK;
+    NIL->size = 0;
+    NIL->count = 0;
+    NIL->left = NIL->right = NIL->parent = NIL;
 }
 
 int* countSmaller(int* nums, int numsSize, int* returnSize) {
-    *returnSize = numsSize;
-    int* result = (int*)malloc(sizeof(int) * numsSize);
-
-    RBTree tree;
-    tree.nil = (RBTNode*)malloc(sizeof(RBTNode));
-    tree.nil->color = BLACK;
-    tree.nil->left = tree.nil->right = tree.nil->parent = NULL;
-    tree.root = tree.nil;
-
+    init_NIL();
+    root = NIL;
+    int* ans = (int*)malloc(sizeof(int) * numsSize);
     for (int i = numsSize - 1; i >= 0; i--) {
-        int smaller = 0;
-        insert(&tree, nums[i], &smaller);
-        result[i] = smaller;
+        ans[i] = countLess(root, nums[i]);
+        insert(&root, nums[i]);
     }
-
-    freeTree(&tree, tree.root);
-    free(tree.nil);
-
-    return result;
+    *returnSize = numsSize;
+    return ans;
 }
