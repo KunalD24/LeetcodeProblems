@@ -4,9 +4,9 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
-#define TABLE_SIZE 262147 // large prime for better distribution
+#define TABLE_SIZE 262147 
 
-// Hash function
+
 int hash(long long key) {
     if (key < 0) key = -key;
     return (int)(key % TABLE_SIZE);
@@ -19,12 +19,11 @@ Node* createNode(long long key) {
     return newNode;
 }
 
-// Insert into hash set (ignore duplicates)
 void insert(Node** table, long long key) {
     int h = hash(key);
     Node* curr = table[h];
     while (curr) {
-        if (curr->key == key) return; // already exists
+        if (curr->key == key) return; 
         curr = curr->next;
     }
     Node* newNode = createNode(key);
@@ -32,7 +31,7 @@ void insert(Node** table, long long key) {
     table[h] = newNode;
 }
 
-// Check if key exists
+
 int contains(Node** table, long long key) {
     int h = hash(key);
     Node* curr = table[h];
@@ -43,7 +42,7 @@ int contains(Node** table, long long key) {
     return 0;
 }
 
-// Free the hash table
+
 void freeTable(Node** table) {
     for (int i = 0; i < TABLE_SIZE; i++) {
         Node* curr = table[i];
@@ -61,7 +60,7 @@ int longestConsecutive(int* nums, int numsSize) {
 
     Node** table = (Node**)calloc(TABLE_SIZE, sizeof(Node*));
 
-    // Insert all numbers into hash set
+
     for (int i = 0; i < numsSize; i++) {
         insert(table, nums[i]);
     }
@@ -71,7 +70,7 @@ int longestConsecutive(int* nums, int numsSize) {
     for (int i = 0; i < numsSize; i++) {
         int num = nums[i];
 
-        // Start counting only if this is sequence start
+    
         if (!contains(table, (long long)num - 1)) {
             int currentNum = num;
             int streak = 1;
