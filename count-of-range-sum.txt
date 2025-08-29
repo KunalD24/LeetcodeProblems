@@ -1,0 +1,158 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef long long ll;
+typedef enum { RED, BLACK } Color;
+
+typedef struct Node {
+    ll key;
+    int count;
+    int size;
+    Color color;
+    struct Node *left, *right, *parent;
+} Node;
+
+Node *NIL;
+Node *root;
+
+int size(Node *x) {
+    return x == NIL ? 0 : x->size;
+}
+
+void update_size(Node *x) {
+    if (x != NIL) {
+        x->size = x->count + size(x->left) + size(x->right);
+    }
+}
+
+void left_rotate(Node **root, Node *x) {
+    Node *y = x->right;
+    x->right = y->left;
+    if (y->left != NIL) y->left->parent = x;
+    y->parent = x->parent;
+    if (x->parent == NIL) *root = y;
+    else if (x == x->parent->left) x->parent->left = y;
+    else x->parent->right = y;
+    y->left = x;
+    x->parent = y;
+    update_size(x);
+    update_size(y);
+}
+
+void right_rotate(Node **root, Node *y) {
+    Node *x = y->left;
+    y->left = x->right;
+    if (x->right != NIL) x->right->parent = y;
+    x->parent = y->parent;
+    if (y->parent == NIL) *root = x;
+    else if (y == y->parent->left) y->parent->left = x;
+    else y->parent->right = x;
+    x->right = y;
+    y->parent = x;
+    update_size(y);
+    update_size(x);
+}
+
+Node* new_node(ll key) {
+    Node *n = (Node*)malloc(sizeof(Node));
+    n->key = key;
+    n->count = 1;
+    n->size = 1;
+    n->color = RED;
+    n->left = n->right = n->parent = NIL;
+    return n;
+}
+
+void insert_fixup(Node **root, Node *z) {
+    while (z->parent->color == RED) {
+        if (z->parent == z->parent->parent->left) {
+            Node *y = z->parent->parent->right;
+            if (y->color == RED) {
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->right) {
+                    z = z->parent;
+                    left_rotate(root, z);
+                }
+                z->parent->color = BLACK;
+                z->parent->parent->color = RED;
+                right_rotate(root, z->parent->parent);
+            }
+        } else {
+            Node *y = z->parent->parent->left;
+            if (y->color == RED) {
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {
+                if (z == z->parent->left) {
+                    z = z->parent;
+                    right_rotate(root, z);
+                }
+                z->parent->color = BLACK;
+                z->parent->parent->color = RED;
+                left_rotate(root, z->parent->parent);
+            }
+        }
+    }
+    (*root)->color = BLACK;
+}
+
+void insert(Node **root, ll key) {
+    Node *y = NIL, *x = *root;
+    while (x != NIL) {
+        y = x;
+        x->size++;
+        if (key == x->key) {
+            x->count++;
+            update_size(x);
+            return;
+        } else if (key < x->key) x = x->left;
+        else x = x->right;
+    }
+    Node *z = new_node(key);
+    z->parent = y;
+    if (y == NIL) *root = z;
+    else if (key < y->key) y->left = z;
+    else y->right = z;
+    insert_fixup(root, z);
+}
+
+int countLessEqual(Node *x, ll key) {
+    if (x == NIL) return 0;
+    if (key < x->key) {
+        return countLessEqual(x->left, key);
+    } else if (key > x->key) {
+        return size(x->left) + x->count + countLessEqual(x->right, key);
+    } else {
+        return size(x->left) + x->count;
+    }
+}
+
+void init_NIL() {
+    NIL = (Node*)malloc(sizeof(Node));
+    NIL->color = BLACK;
+    NIL->size = 0;
+    NIL->count = 0;
+    NIL->left = NIL->right = NIL->parent = NIL;
+}
+
+int countRangeSum(int* nums, int numsSize, int lower, int upper) {
+    init_NIL();
+    root = NIL;
+    ll prefix = 0;
+    int ans = 0;
+    insert(&root, 0);
+    for (int i = 0; i < numsSize; i++) {
+        prefix += nums[i];
+        int cnt1 = countLessEqual(root, prefix - lower);
+        int cnt2 = countLessEqual(root, prefix - upper - 1);
+        ans += (cnt1 - cnt2);
+        insert(&root, prefix);
+    }
+    return ans;
+}
